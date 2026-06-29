@@ -6,7 +6,7 @@
     <title>Sweepstake Outright Probability Dashboard</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js for visualizations -->
+    <!-- Chart.js for visualizations (guarded with a robust CSS fallback in case of blockages) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         body {
@@ -99,7 +99,7 @@
                 <!-- Chart Card -->
                 <div class="bg-slate-900/30 border border-slate-800 rounded-xl p-4 flex flex-col h-[280px]">
                     <h2 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-3">Probability Distribution</h2>
-                    <div class="relative flex-1">
+                    <div id="probabilityChartContainer" class="relative flex-1 min-h-0">
                         <canvas id="probabilityChart"></canvas>
                     </div>
                 </div>
@@ -183,6 +183,7 @@
         let players = JSON.parse(JSON.stringify(initialPlayers));
         let teamStatusMap = {};
         let chartInstance = null;
+        let h2hInitialized = false;
 
         function initTeamMap() {
             teamStatusMap = {};
@@ -243,17 +244,15 @@
         }
 
         function populateH2HSelectors() {
+            if (h2hInitialized) return; // Prevent overwriting active user selections
+            
             const selectA = document.getElementById("h2h-select-a");
             const selectB = document.getElementById("h2h-select-b");
-            
-            // Keep current selections if possible
-            const valA = selectA.value;
-            const valB = selectB.value;
+            if (!selectA || !selectB) return;
 
             selectA.innerHTML = "";
             selectB.innerHTML = "";
 
-            // Sort alphabetically for selector ease
             const alphaPlayers = [...players].sort((a, b) => a.name.localeCompare(b.name));
 
             alphaPlayers.forEach(p => {
@@ -268,16 +267,21 @@
                 selectB.appendChild(optB);
             });
 
-            // Re-apply values or default to top contestants
             let sortedPlayers = [...players].sort((a, b) => b.calculatedProbability - a.calculatedProbability);
-            selectA.value = valA && players.some(p => p.name === valA) ? valA : sortedPlayers[0].name;
-            selectB.value = valB && players.some(p => p.name === valB) ? valB : (sortedPlayers[1] ? sortedPlayers[1].name : sortedPlayers[0].name);
+            selectA.value = sortedPlayers[0].name;
+            selectB.value = sortedPlayers[1] ? sortedPlayers[1].name : sortedPlayers[0].name;
+            
+            h2hInitialized = true;
         }
 
         function calculateH2H() {
-            const nameA = document.getElementById("h2h-select-a").value;
-            const nameB = document.getElementById("h2h-select-b").value;
+            const selectA = document.getElementById("h2h-select-a");
+            const selectB = document.getElementById("h2h-select-b");
             const output = document.getElementById("h2h-comparison-output");
+            if (!selectA || !selectB || !output || !selectA.value || !selectB.value) return;
+
+            const nameA = selectA.value;
+            const nameB = selectB.value;
 
             if (nameA === nameB) {
                 output.innerHTML = `
@@ -303,13 +307,10 @@
                 relativeB = (probB / sum) * 100;
             }
 
-            // Find best team for each
             const getBestTeam = (p) => {
                 if (!p.activeTeamsList || p.activeTeamsList.length === 0) return null;
                 return p.activeTeamsList.reduce((best, current) => {
-                    const oddsCurrent = getTeamOdds(current.name);
-                    const oddsBest = getTeamOdds(best.name);
-                    return oddsCurrent < oddsBest ? current : best;
+                    return getTeamOdds(current.name) < getTeamOdds(best.name) ? current : best;
                 });
             };
 
@@ -346,7 +347,6 @@
 
                     <!-- Side-by-Side Comparison -->
                     <div class="grid grid-cols-2 gap-3 text-[11px] border-t border-slate-800/60 pt-3">
-                        <!-- Contestant A Stats -->
                         <div class="space-y-1">
                             <span class="text-[10px] text-slate-500 font-semibold uppercase block">${nameA} Portfolio</span>
                             <div class="bg-slate-950 p-2 rounded border border-slate-900/60">
@@ -355,6 +355,5 @@
                                 <div class="text-[9px] text-slate-500 font-mono mt-0.5">Odds: ${bestTeamA ? getTeamOdds(bestTeamA.name) + '/1' : 'N/A'}</div>
                             </div>
                         </div>
-                        
-                        <!-- Contestant B Stats -->
-                        <di
+                        <div class="space-y-1">
+                            <span class="text-[10px] text-slate-500 font-semibold uppercase block">${nameB} Portfolio
