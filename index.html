@@ -74,7 +74,6 @@
                 <div class="bg-slate-900/30 border border-slate-800 rounded-xl overflow-hidden flex-1 flex flex-col">
                     <div class="p-3 border-b border-slate-800/80 bg-slate-900/60 flex justify-between items-center">
                         <h2 class="text-xs font-bold uppercase text-slate-400 tracking-wider">Contestant Leaderboard</h2>
-                        <span class="text-[10px] text-slate-500">Click row for details</span>
                     </div>
                     <div class="overflow-x-auto flex-1">
                         <table class="w-full text-left border-collapse text-xs">
@@ -94,7 +93,7 @@
                 </div>
             </div>
 
-            <!-- MIDDLE COLUMN: Visualisation Chart & Selection Details (4 Cols) -->
+            <!-- MIDDLE COLUMN: Visualisation Chart & Head-to-Head Compare (4 Cols) -->
             <div class="lg:col-span-4 flex flex-col space-y-4">
                 
                 <!-- Chart Card -->
@@ -105,11 +104,33 @@
                     </div>
                 </div>
 
-                <!-- Selected Player Details Card -->
-                <div id="selection-details-card" class="bg-slate-900/30 border border-indigo-900/20 rounded-xl p-4 flex-1">
-                    <h2 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">Portfolio Diagnostics</h2>
-                    <div id="diagnostics-content" class="text-xs text-slate-400 space-y-3">
-                        <p class="italic text-slate-500">Select a participant from the table to view real-time portfolio risk analysis, diversification scores, and math breakdowns.</p>
+                <!-- Head-to-Head Tool Card -->
+                <div class="bg-slate-900/30 border border-slate-800 rounded-xl p-4 flex-1 flex flex-col justify-between min-h-[220px]">
+                    <div>
+                        <h2 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-3 flex items-center gap-1.5">
+                            ⚔️ Head-to-Head Matchup Matrix
+                        </h2>
+                        
+                        <!-- Selectors -->
+                        <div class="grid grid-cols-2 gap-2 mb-4">
+                            <div>
+                                <label class="text-[9px] text-slate-500 font-mono uppercase block mb-1">Contestant A</label>
+                                <select id="h2h-select-a" onchange="calculateH2H()" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                                    <!-- Dynamic -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[9px] text-slate-500 font-mono uppercase block mb-1">Contestant B</label>
+                                <select id="h2h-select-b" onchange="calculateH2H()" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                                    <!-- Dynamic -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Matchup Comparison Visualiser -->
+                        <div id="h2h-comparison-output" class="space-y-3">
+                            <!-- Dynamic H2H calculation metrics -->
+                        </div>
                     </div>
                 </div>
 
@@ -136,32 +157,31 @@
     </div>
 
     <script>
-        // Outright decimal bookmaker odds configuration (2026 Outright Base)
+        // Exact lineup and live statuses configured from 41045.jpg outrights
         const initialPlayers = [
-            { name: "Donald", teams: [{ name: "France", odds: 4.5, status: "In" }, { name: "South Korea", odds: 101, status: "Out" }, { name: "Tunisia", odds: 301, status: "Out" }] },
-            { name: "Chris B", teams: [{ name: "Argentina", odds: 5.0, status: "In" }, { name: "Australia", odds: 251, status: "In" }, { name: "Haiti", odds: 1001, status: "Out" }] },
-            { name: "Alex", teams: [{ name: "England", odds: 6.0, status: "In" }, { name: "Germany", odds: 11.0, status: "In" }, { name: "Uruguay", odds: 51, status: "Out" }] },
-            { name: "Lauren", teams: [{ name: "Spain", odds: 6.5, status: "In" }, { name: "Norway", odds: 101, status: "In" }, { name: "Sweden", odds: 251, status: "In" }] },
-            { name: "Joe", teams: [{ name: "Netherlands", odds: 15.0, status: "In" }, { name: "Morocco", odds: 41.0, status: "In" }, { name: "Iraq", odds: 501, status: "Out" }] },
-            { name: "Joanne", teams: [{ name: "Portugal", odds: 13.0, status: "In" }, { name: "Ecuador", odds: 81.0, status: "In" }, { name: "Scotland", odds: 251, status: "Out" }] },
-            { name: "Jon", teams: [{ name: "Brazil", odds: 8.0, status: "In" }, { name: "Algeria", odds: 301, status: "In" }, { name: "Paraguay", odds: 301, status: "In" }] },
-            { name: "George", teams: [{ name: "Colombia", odds: 26.0, status: "In" }, { name: "Senegal", odds: 151, status: "In" }, { name: "Croatia", odds: 101, status: "In" }] },
             { name: "Dom", teams: [{ name: "United States", odds: 67.0, status: "In" }, { name: "Canada", odds: 201, status: "In" }, { name: "Ghana", odds: 201, status: "In" }] },
+            { name: "George", teams: [{ name: "Colombia", odds: 26.0, status: "In" }, { name: "Croatia", odds: 101, status: "In" }, { name: "Senegal", odds: 151, status: "In" }] },
+            { name: "Jon", teams: [{ name: "Brazil", odds: 8.0, status: "In" }, { name: "Paraguay", odds: 301, status: "In" }, { name: "Algeria", odds: 301, status: "In" }] },
+            { name: "Lauren", teams: [{ name: "Spain", odds: 6.5, status: "In" }, { name: "Norway", odds: 101, status: "In" }, { name: "Sweden", odds: 251, status: "In" }] },
+            { name: "Alex", teams: [{ name: "England", odds: 6.0, status: "In" }, { name: "Germany", odds: 11.0, status: "In" }, { name: "Uruguay", odds: 51, status: "Out" }] },
+            { name: "Chris B", teams: [{ name: "Argentina", odds: 5.0, status: "In" }, { name: "Australia", odds: 251, status: "In" }, { name: "Haiti", odds: 1001, status: "Out" }] },
+            { name: "Craig", teams: [{ name: "Bosnia-Herzegovina", odds: 501, status: "In" }, { name: "Congo DR", odds: 501, status: "In" }, { name: "Saudi Arabia", odds: 301, status: "Out" }] },
             { name: "James", teams: [{ name: "Mexico", odds: 67.0, status: "In" }, { name: "Ivory Coast", odds: 201, status: "In" }, { name: "Iran", odds: 251, status: "Out" }] },
+            { name: "Joanne", teams: [{ name: "Portugal", odds: 13.0, status: "In" }, { name: "Ecuador", odds: 81.0, status: "In" }, { name: "Scotland", odds: 251, status: "Out" }] },
+            { name: "Joe", teams: [{ name: "Netherlands", odds: 15.0, status: "In" }, { name: "Morocco", odds: 41.0, status: "In" }, { name: "Iraq", odds: 501, status: "Out" }] },
+            { name: "Alicia", teams: [{ name: "Cape Verde", odds: 751, status: "In" }] },
             { name: "Chris S", teams: [{ name: "Belgium", odds: 34.0, status: "In" }, { name: "Panama", odds: 401, status: "Out" }] },
             { name: "Danny", teams: [{ name: "Switzerland", odds: 51.0, status: "In" }] },
             { name: "Dante", teams: [{ name: "Japan", odds: 51.0, status: "In" }] },
-            { name: "Rich", teams: [{ name: "Egypt", odds: 251, status: "In" }, { name: "Turkey", odds: 67, status: "Out" }, { name: "New Zealand", odds: 301, status: "Out" }] },
-            { name: "Craig", teams: [{ name: "Bosnia-Herzegovina", odds: 501, status: "In" }, { name: "Congo DR", odds: 501, status: "In" }, { name: "Saudi Arabia", odds: 301, status: "Out" }] },
+            { name: "Donald", teams: [{ name: "France", odds: 4.5, status: "In" }, { name: "South Korea", odds: 101, status: "Out" }, { name: "Tunisia", odds: 301, status: "Out" }] },
             { name: "OC", teams: [{ name: "Austria", odds: 401, status: "In" }, { name: "Qatar", odds: 501, status: "Out" }, { name: "South Africa", odds: 751, status: "Out" }] },
-            { name: "Alicia", teams: [{ name: "Cape Verde", odds: 751, status: "In" }] },
+            { name: "Rich", teams: [{ name: "Egypt", odds: 251, status: "In" }, { name: "Turkey", odds: 67, status: "Out" }, { name: "New Zealand", odds: 301, status: "Out" }] },
             { name: "Diarmuid", teams: [{ name: "Curacao", odds: 1001, status: "Out" }] },
             { name: "Julia", teams: [{ name: "Czech Republic", odds: 51, status: "Out" }, { name: "Jordan", odds: 501, status: "Out" }, { name: "Uzbekistan", odds: 501, status: "Out" }] }
         ];
 
         let players = JSON.parse(JSON.stringify(initialPlayers));
         let teamStatusMap = {};
-        let selectedPlayerName = null;
         let chartInstance = null;
 
         function initTeamMap() {
@@ -175,11 +195,9 @@
             });
         }
 
-        // Calculate team base implied probabilities & normalize over current active subset
         function calculateProbabilities() {
             let totalActiveImpliedProb = 0;
 
-            // Calculate active base implied probabilities: 1 / decimal odds
             for (let teamName in teamStatusMap) {
                 if (teamStatusMap[teamName] === "In") {
                     totalActiveImpliedProb += 1 / getTeamOdds(teamName);
@@ -224,134 +242,119 @@
             updateDashboard();
         }
 
-        function selectPlayer(name) {
-            selectedPlayerName = name;
-            renderDiagnostics(name);
-            updateLeaderboardHighlights();
-        }
+        function populateH2HSelectors() {
+            const selectA = document.getElementById("h2h-select-a");
+            const selectB = document.getElementById("h2h-select-b");
+            
+            // Keep current selections if possible
+            const valA = selectA.value;
+            const valB = selectB.value;
 
-        function updateLeaderboardHighlights() {
-            const rows = document.querySelectorAll("#leaderboard-body tr");
-            rows.forEach(row => {
-                const rowName = row.getAttribute("data-player");
-                if (rowName === selectedPlayerName) {
-                    row.className = "bg-indigo-950/40 border-l-2 border-indigo-500 cursor-pointer transition-colors";
-                } else {
-                    const prob = parseFloat(row.getAttribute("data-prob"));
-                    row.className = prob > 0 
-                        ? "hover:bg-slate-900/40 cursor-pointer transition-colors border-l-2 border-transparent" 
-                        : "hover:bg-slate-900/20 opacity-40 cursor-pointer transition-colors border-l-2 border-transparent";
-                }
+            selectA.innerHTML = "";
+            selectB.innerHTML = "";
+
+            // Sort alphabetically for selector ease
+            const alphaPlayers = [...players].sort((a, b) => a.name.localeCompare(b.name));
+
+            alphaPlayers.forEach(p => {
+                const optA = document.createElement("option");
+                optA.value = p.name;
+                optA.innerText = p.name;
+                selectA.appendChild(optA);
+
+                const optB = document.createElement("option");
+                optB.value = p.name;
+                optB.innerText = p.name;
+                selectB.appendChild(optB);
             });
+
+            // Re-apply values or default to top contestants
+            let sortedPlayers = [...players].sort((a, b) => b.calculatedProbability - a.calculatedProbability);
+            selectA.value = valA && players.some(p => p.name === valA) ? valA : sortedPlayers[0].name;
+            selectB.value = valB && players.some(p => p.name === valB) ? valB : (sortedPlayers[1] ? sortedPlayers[1].name : sortedPlayers[0].name);
         }
 
-        function renderDiagnostics(playerName) {
-            const container = document.getElementById("diagnostics-content");
-            const player = players.find(p => p.name === playerName);
-            if (!player) return;
+        function calculateH2H() {
+            const nameA = document.getElementById("h2h-select-a").value;
+            const nameB = document.getElementById("h2h-select-b").value;
+            const output = document.getElementById("h2h-comparison-output");
 
-            if (player.calculatedProbability === 0) {
-                container.innerHTML = `
-                    <div class="space-y-2">
-                        <div class="flex justify-between items-center">
-                            <h3 class="font-bold text-slate-200 text-sm">${player.name}</h3>
-                            <span class="text-xs font-mono px-2 py-0.5 bg-red-950 text-red-400 rounded">Eliminated</span>
-                        </div>
-                        <p class="text-slate-500 text-[11px] leading-relaxed">No active teams remaining. All assets held have been knocked out of the current simulation.</p>
+            if (nameA === nameB) {
+                output.innerHTML = `
+                    <div class="text-center py-6 text-slate-500 text-xs italic">
+                        Select two different contestants to compare matchups.
                     </div>
                 `;
                 return;
             }
 
-            // Calculations for expected diagnostics
-            // 1. Portfolio Concentration HHI (Sum of squared shares of personal active portfolio)
-            const activeCount = player.activeTeamsList.length;
-            let totalPersonalBase = player.activeTeamsList.reduce((acc, t) => acc + t.baseProb, 0);
-            let squaredSharesSum = 0;
-            player.activeTeamsList.forEach(t => {
-                let share = t.baseProb / totalPersonalBase;
-                squaredSharesSum += share * share;
-            });
-            const hhi = squaredSharesSum; // 1.0 is highly concentrated (single team), low is diversified.
+            const pA = players.find(p => p.name === nameA);
+            const pB = players.find(p => p.name === nameB);
 
-            let riskClass = "text-red-400";
-            let riskLabel = "High Concentration (Single Asset)";
-            if (hhi < 0.4) {
-                riskClass = "text-emerald-400";
-                riskLabel = "Highly Diversified Portfolio";
-            } else if (hhi < 0.7) {
-                riskClass = "text-amber-400";
-                riskLabel = "Moderate Concentration";
+            const probA = pA.calculatedProbability;
+            const probB = pB.calculatedProbability;
+            const sum = probA + probB;
+
+            let relativeA = 0;
+            let relativeB = 0;
+
+            if (sum > 0) {
+                relativeA = (probA / sum) * 100;
+                relativeB = (probB / sum) * 100;
             }
 
-            // Compute total tournament active pool base
-            let activePoolBase = 0;
-            for (let tName in teamStatusMap) {
-                if (teamStatusMap[tName] === "In") activePoolBase += 1 / getTeamOdds(tName);
+            // Find best team for each
+            const getBestTeam = (p) => {
+                if (!p.activeTeamsList || p.activeTeamsList.length === 0) return null;
+                return p.activeTeamsList.reduce((best, current) => {
+                    const oddsCurrent = getTeamOdds(current.name);
+                    const oddsBest = getTeamOdds(best.name);
+                    return oddsCurrent < oddsBest ? current : best;
+                });
+            };
+
+            const bestTeamA = getBestTeam(pA);
+            const bestTeamB = getBestTeam(pB);
+
+            let matchupAnalysis = "";
+            if (probA === 0 && probB === 0) {
+                matchupAnalysis = "Both contestants are mathematically eliminated from the pool.";
+            } else if (probA > probB) {
+                const ratio = (probA / (probB || 0.1)).toFixed(1);
+                matchupAnalysis = `<strong>${nameA}</strong> is holding the advantage. Their portfolio is statistically <strong>${ratio}x</strong> stronger than <strong>${nameB}</strong>.`;
+            } else if (probB > probA) {
+                const ratio = (probB / (probA || 0.1)).toFixed(1);
+                matchupAnalysis = `<strong>${nameB}</strong> is holding the advantage. Their portfolio is statistically <strong>${ratio}x</strong> stronger than <strong>${nameA}</strong>.`;
+            } else {
+                matchupAnalysis = "Both portfolios hold identical mathematical probabilities at this tournament state.";
             }
 
-            container.innerHTML = `
-                <div class="space-y-3">
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-1.5">
-                        <h3 class="font-bold text-slate-200 text-sm">${player.name}</h3>
-                        <span class="text-xs font-mono font-bold text-indigo-400">${player.calculatedProbability.toFixed(1)}% Chance</span>
+            output.innerHTML = `
+                <div class="space-y-4">
+                    <!-- Head-to-head Percentage Bar -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-[11px] font-mono font-semibold">
+                            <span class="text-indigo-400">${nameA} (${relativeA.toFixed(1)}%)</span>
+                            <span class="text-emerald-400">${relativeB.toFixed(1)}% (${nameB})</span>
+                        </div>
+                        <div class="w-full bg-slate-950 rounded-full h-2.5 flex overflow-hidden border border-slate-900">
+                            <div class="bg-indigo-500" style="width: ${relativeA}%"></div>
+                            <div class="bg-emerald-500" style="width: ${relativeB}%"></div>
+                        </div>
+                        <span class="text-[9px] text-slate-500 font-mono block text-center">Relative win share distribution of selected pair</span>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-2 text-[11px]">
-                        <div class="bg-slate-950 p-2 rounded border border-slate-900">
-                            <span class="text-[9px] text-slate-500 block">Risk Distribution</span>
-                            <span class="font-semibold ${riskClass}">${riskLabel}</span>
+                    <!-- Side-by-Side Comparison -->
+                    <div class="grid grid-cols-2 gap-3 text-[11px] border-t border-slate-800/60 pt-3">
+                        <!-- Contestant A Stats -->
+                        <div class="space-y-1">
+                            <span class="text-[10px] text-slate-500 font-semibold uppercase block">${nameA} Portfolio</span>
+                            <div class="bg-slate-950 p-2 rounded border border-slate-900/60">
+                                <div class="text-[10px] text-slate-400">Top Asset:</div>
+                                <div class="font-bold text-slate-200">${bestTeamA ? bestTeamA.name : "None"}</div>
+                                <div class="text-[9px] text-slate-500 font-mono mt-0.5">Odds: ${bestTeamA ? getTeamOdds(bestTeamA.name) + '/1' : 'N/A'}</div>
+                            </div>
                         </div>
-                        <div class="bg-slate-950 p-2 rounded border border-slate-900">
-                            <span class="text-[9px] text-slate-500 block">Active Selections</span>
-                            <span class="font-semibold text-slate-300">${activeCount} of ${player.teams.length} Live</span>
-                        </div>
-                    </div>
-
-                    <div class="space-y-1.5">
-                        <span class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold block">Contributing Assets:</span>
-                        <div class="space-y-1 font-mono text-[10px]">
-                            ${player.activeTeamsList.map(t => {
-                                const normalizedProb = (t.baseProb / activePoolBase) * 100;
-                                return `
-                                    <div class="flex justify-between bg-slate-950 p-1.5 rounded border border-slate-900/50">
-                                        <span class="text-slate-300 font-semibold">${t.name}</span>
-                                        <div class="text-right">
-                                            <span class="text-indigo-400">${normalizedProb.toFixed(1)}%</span>
-                                            <span class="text-slate-500 text-[9px] ml-1">(${getTeamOdds(t.name)}/1)</span>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join("")}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function updateDashboard() {
-            calculateProbabilities();
-
-            let sortedPlayers = [...players].sort((a, b) => b.calculatedProbability - a.calculatedProbability || b.activeTeamsList.length - a.activeTeamsList.length);
-
-            // Set default selected player if none set
-            if (!selectedPlayerName || !players.some(p => p.name === selectedPlayerName)) {
-                selectedPlayerName = sortedPlayers[0].name;
-            }
-
-            // Update leaderboard UI
-            const tbody = document.getElementById("leaderboard-body");
-            tbody.innerHTML = "";
-
-            sortedPlayers.forEach((p, idx) => {
-                const activeText = p.activeTeamsList.map(t => t.name).join(", ") || "None";
-                const deadText = p.teams.filter(t => teamStatusMap[t.name] === "Out").map(t => t.name).join(", ");
-
-                const tr = document.createElement("tr");
-                tr.setAttribute("data-player", p.name);
-                tr.setAttribute("data-prob", p.calculatedProbability);
-                tr.setAttribute("onclick", `selectPlayer('${p.name}')`);
-
-                tr.innerHTML = `
-                    <td class="py-2 px-3 text-center font-mono text-slate-500">${idx + 1}</td>
-                    <td class="py-2 px-
+                        
+                        <!-- Contestant B Stats -->
+                        <di
